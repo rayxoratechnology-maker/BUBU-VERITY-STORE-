@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BUBU VARIETY STORE - Billing & Khata</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:12px;font-family:Arial,sans-serif;background:linear-gradient(135deg,#dcebd1,#f8e8b5);color:#222}
+header{background:linear-gradient(110deg,#e51c23,#ffcf00);padding:20px 10px;text-align:center;border:3px solid white;border-radius:14px;color:#111}
+header h1{font-size:27px;margin:0}header h2{margin:7px 0}header p{font-size:13px;margin:5px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+button{border:0;padding:12px;border-radius:8px;background:#c51e27;color:white;font-weight:bold;cursor:pointer}
+nav button.active,.green{background:#168447}
+.blue{background:#1769aa}.gray{background:#555}.red{background:#c51e27}
+.card{background:#ffffffed;padding:15px;border-radius:13px;margin-bottom:12px;box-shadow:0 3px 12px #0002}
+h3{color:#b51c20;margin-top:0}
+label{font-size:13px;font-weight:bold}
+input,select{width:100%;padding:11px;margin:5px 0 10px;border:1px solid #bbb;border-radius:7px;font-size:15px;background:white}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+th,td{border:1px solid #ddd;padding:8px;text-align:center}
+th{background:#ffe18a}
+.total{text-align:right;font-size:19px;font-weight:bold;margin:12px 0}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+.actions button{flex:1;min-width:110px}
+.hidden{display:none!important}
+.small{font-size:12px;color:#555}
+.history-item{border:1px solid #ddd;padding:12px;border-radius:9px;margin:9px 0;line-height:1.8;background:white;color:#222}
+#qr{width:180px;height:180px;display:block;margin:10px auto}
+.status{font-weight:bold;margin-top:10px}
+@media(max-width:480px){.grid{grid-template-columns:1fr}table{font-size:11px}th,td{padding:5px}}
+@media print{body{background:white;padding:0}nav,.no-print,#history,#settings{display:none!important}.card{box-shadow:none;border:0}header{border:1px solid #333}}
+</style>
+</head>
+<body>
+
+<header>
+<h1>ବୁବୁ ଭେରାଇଟି ଷ୍ଟୋର</h1>
+<h2>BUBU VARIETY STORE</h2>
+<p>Palbani, Baripada, Mayurbhanj, Odisha, India</p>
+<p>GSTIN: 21AKOPJ9490R1Z8 | Mobile: 7205627144</p>
+</header>
+
+<nav class="no-print">
+<button class="active" data-tab="billing">New Bill</button>
+<button data-tab="history">Sales & Udhaar</button>
+<button data-tab="settings">Settings</button>
+</nav>
+
+<section id="billing">
+<div class="card">
+<h3>🧾 Bill Details</h3>
+<div class="grid">
+<div><label>Bill Number</label><input id="billNo" readonly></div>
+<div><label>Date</label><input id="billDate" readonly></div>
+</div>
+<h3>Customer Details</h3>
+<div class="grid">
+<div><label>Mobile Number</label><input id="phone" maxlength="10" inputmode="numeric" placeholder="10 digit mobile number"></div>
+<div><label>Customer Name</label><input id="customer" placeholder="Customer name"></div>
+</div>
+<label>Payment Mode</label>
+<select id="payment">
+<option>Cash</option><option>UPI</option><option>Udhaar / Credit</option>
+</select>
+</div>
+
+<div class="card">
+<h3>🛒 Grocery Item Entry</h3>
+<label>Search / Item Name</label>
+<input id="itemName" list="groceryItems" placeholder="Type item name...">
+<datalist id="groceryItems"></datalist>
+<div class="grid">
+<div><label>Rate (₹)</label><input id="rate" type="number" min="0" step="0.01" placeholder="Enter rate"></div>
+<div><label>Quantity</label><input id="qty" type="number" min="0.001" step="0.001" value="1"></div>
+</div>
+<label>Unit</label>
+<select id="unit">
+<option>kg</option><option>gm</option><option>ltr</option><option>ml</option><option>pcs</option><option>pkt</option><option>dozen</option><option>box</option><option>bottle</option><option>bag</option><option>bundle</option>
+</select>
+<button class="green" id="addItemBtn">➕ Add Item</button>
+<table>
+<thead><tr><th>Item</th><th>Rate</th><th>Qty</th><th>Unit</th><th>Total</th><th>Delete</th></tr></thead>
+<tbody id="items"></tbody>
+</table>
+<div class="grid">
+<div><label>Discount (₹)</label><input id="discount" type="number" min="0" value="0"></div>
+<div class="total">Grand Total: ₹<span id="grand">0.00</span></div>
+</div>
+<div id="qrArea" class="hidden">
+<p style="text-align:center"><b>Scan to Pay</b></p>
+<img id="qr" alt="UPI payment QR">
+<p id="upiText" style="text-align:center"></p>
+</div>
+</div>
+
+<div class="card no-print">
+<h3>📤 Bill Actions</h3>
+<div class="actions">
+<button class="green" id="saveBtn">💾 Save & Download Bill</button>
+<button class="blue" id="whatsappBtn">WhatsApp</button>
+<button class="gray" id="printBtn">Print / Save PDF</button>
+<button class="red" id="newBtn">New Bill / Clear</button>
+</div>
+<p id="message" class="status"></p>
+</div>
+</section>
+
+<section id="history" class="hidden">
+<div class="card">
+<h3>📊 Sales Summary</h3>
+<p>Total Sales: ₹<b id="sales">0.00</b></p>
+<p>Total Pending Udhaar: ₹<b id="pending">0.00</b></p>
+<p>Total Bills: <b id="billCount">0</b></p>
+</div>
+<div class="card">
+<h3>📒 Sales & Udhaar History</h3>
+<div id="historyList"></div>
+</div>
+</section>
+
+<section id="settings" class="hidden">
+<div class="card">
+<h3>⚙️ Settings</h3>
+<label>Shop UPI ID</label>
+<input id="upi" placeholder="example@upi">
+<label>Website Background Theme</label>
+<select id="theme">
+<option value="grocery">Grocery Green</option>
+<option value="gold">Golden Green</option>
+<option value="dark">Dark Mode</option>
+<option value="gray">Clean Gray</option>
+</select>
+<button class="green" id="settingsSave">Save Settings</button>
+<p id="settingsMessage" class="status"></p>
+</div>
+</section>
+
+<script>
+"use strict";
+
+const $=id=>document.getElementById(id);
+
+const groceryItems=`
+Rice,Basmati Rice,Sona Masoori Rice,Boiled Rice,Raw Rice,Arwa Rice,Brown Rice,Poha,Chuda,Murmura,Puffed Rice,Rice Flour,Wheat,Wheat Flour,Atta,Maida,Suji,Rava,Besan,Sattu,Corn Flour,Ragi Flour,Bajra,Jowar,
+Toor Dal,Arhar Dal,Moong Dal,Moong Whole,Masoor Dal,Chana Dal,Urad Dal,Urad Whole,Kabuli Chana,Kala Chana,Rajma,White Peas,Green Peas,Black Gram,Soyabean,Groundnut,Peanuts,Roasted Chana,
+Sugar,Brown Sugar,Jaggery,Gur,Salt,Rock Salt,Black Salt,Iodized Salt,Cooking Oil,Sunflower Oil,Mustard Oil,Rice Bran Oil,Soybean Oil,Coconut Oil,Ghee,Butter,Vanaspati,
+Turmeric Powder,Chilli Powder,Kashmiri Chilli,Coriander Powder,Cumin Powder,Cumin Seeds,Mustard Seeds,Black Pepper,Garam Masala,Chicken Masala,Meat Masala,Fish Masala,Biryani Masala,Sambar Masala,Pav Bhaji Masala,Chaat Masala,Hing,Fenugreek,Cardamom,Cloves,Cinnamon,Bay Leaf,Fennel Seeds,Ajwain,Kasuri Methi,
+Tea,Tea Powder,Green Tea,Coffee,Horlicks,Bournvita,Complan,Milk Powder,Custard Powder,
+Milk,Curd,Yogurt,Paneer,Cheese,Buttermilk,Lassi,Cream,Eggs,
+Potato Chips,Banana Chips,Biscuits,Glucose Biscuits,Cream Biscuits,Cookies,Rusk,Toast,Bread,Bun,Cake,Cup Cake,Noodles,Instant Noodles,Pasta,Macaroni,Vermicelli,Papad,Namkeen,Mixture,Bhujia,Sev,Popcorn,Chocolate,Candy,Toffee,Lollipop,Jelly,Ice Cream,
+Tomato Sauce,Chilli Sauce,Soy Sauce,Vinegar,Pickle,Mango Pickle,Mixed Pickle,Jam,Honey,Peanut Butter,
+Cold Drink,Soft Drink,Soda,Mineral Water,Packaged Water,Juice,Mango Juice,Energy Drink,Coconut Water,Sharbat,
+Soap,Bathing Soap,Detergent Powder,Washing Powder,Detergent Bar,Dishwash Bar,Dishwash Liquid,Toilet Cleaner,Floor Cleaner,Phenyl,Bleaching Powder,Harpic,Scrub Pad,Sponge,Room Freshener,Mosquito Coil,Mosquito Liquid,Mosquito Spray,
+Shampoo,Hair Oil,Conditioner,Toothpaste,Toothbrush,Face Wash,Hand Wash,Hand Sanitizer,Body Lotion,Cold Cream,Talcum Powder,Shaving Cream,Razor,Comb,Hair Colour,Deodorant,
+Matchbox,Candle,Battery,Torch,LED Bulb,Incense Stick,Agarbatti,Camphor,Cotton,Tissue Paper,Paper Napkin,Aluminium Foil,Plastic Wrap,Garbage Bag,Paper Cup,Paper Plate,Disposable Glass,Disposable Plate,
+Onion,Tomato,Potato,Garlic,Ginger,Green Chilli,Lemon,Coriander Leaves,Curry Leaves,Carrot,Cabbage,Cauliflower,Brinjal,Lady Finger,Cucumber,Pumpkin,Spinach,Beans,Capsicum,
+Banana,Apple,Orange,Mango,Papaya,Guava,Grapes,Watermelon,Pomegranate,Coconut,Dry Coconut,Cashew,Almond,Raisins,Dates,Walnut,
+Pet Food,Baby Food,Baby Diaper,Sanitary Pad,Bandage,Cotton Buds,Vicks,Pain Balm,ORS,Glucose Powder
+`.split(",").map(x=>x.trim()).filter(Boolean);
+
+$("groceryItems").innerHTML=[...new Set(groceryItems)].map(x=>`<option value="${x.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}"></option>`).join("");
+
+let cart=[];
+let bills=JSON.parse(localStorage.getItem("bubuBills")||"[]");
+let nextNo=Number(localStorage.getItem("bubuNext")||101);
+let customers=JSON.parse(localStorage.getItem("bubuCustomers")||"{}");
+let upi=localStorage.getItem("bubuUpi")||"";
+let theme=localStorage.getItem("bubuTheme")||"grocery";
+let lastSavedNo=null;
+
+function money(n){return Number(n||0).toFixed(2)}
+function saveData(){localStorage.setItem("bubuBills",JSON.stringify(bills))}
+function setupBill(){
+$("billNo").value="#"+nextNo;
+$("billDate").value=new Date().toLocaleDateString("en-IN");
+}
+function escapeHTML(s){
+return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+document.querySelectorAll("nav button").forEach(btn=>{
+btn.addEventListener("click",()=>{
+let tab=btn.dataset.tab;
+["billing","history","settings"].forEach(id=>$(id).classList.toggle("hidden",id!==tab));
+document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b===btn));
+if(tab==="history")renderHistory();
+if(tab==="settings"){$("upi").value=upi;$("theme").value=theme}
+});
+});
+
+$("phone").addEventListener("input",()=>{
+let p=$("phone").value.replace(/\D/g,"").slice(0,10);
+$("phone").value=p;
+if(customers[p])$("customer").value=customers[p];
+});
+
+$("addItemBtn").addEventListener("click",addItem);
+$("discount").addEventListener("input",calculate);
+$("saveBtn").addEventListener("click",saveBill);
+$("whatsappBtn").addEventListener("click",shareWhatsApp);
+$("printBtn").addEventListener("click",()=>window.print());
+$("newBtn").addEventListener("click",newBill);
+$("settingsSave").addEventListener("click",saveSettings);
+
+function addItem(){
+let name=$("itemName").value.trim();
+let rate=Number($("rate").value);
+let qty=Number($("qty").value);
+let unit=$("unit").value;
+if(!name){alert("Item name enter karo");$("itemName").focus();return}
+if($("rate").value===""||!Number.isFinite(rate)||rate<0){alert("Valid rate enter karo");return}
+if(!qty||qty<=0){alert("Valid quantity enter karo");return}
+cart.push({name,rate,qty,unit});
+$("itemName").value="";
+$("rate").value="";
+$("qty").value=1;
+renderItems();
+$("itemName").focus();
+}
+
+function deleteItem(i){cart.splice(i,1);renderItems()}
+
+function renderItems(){
+$("items").innerHTML=cart.map((x,i)=>`
+<tr>
+<td>${escapeHTML(x.name)}</td>
+<td>₹${money(x.rate)}</td>
+<td>${x.qty}</td><td>${escapeHTML(x.unit)}</td>
+<td>₹${money(x.rate*x.qty)}</td>
+<td><button class="red" data-delete="${i}">X</button></td>
+</tr>`).join("");
+document.querySelectorAll("[data-delete]").forEach(btn=>btn.addEventListener("click",()=>deleteItem(Number(btn.dataset.delete))));
+calculate();
+}
+
+function getTotal(){
+let subtotal=cart.reduce((s,x)=>s+x.rate*x.qty,0);
+let discount=Math.max(0,Number($("discount").value)||0);
+return {subtotal,discount,total:Math.max(0,subtotal-discount)};
+}
+
+function calculate(){
+let {total}=getTotal();
+$("grand").textContent=money(total);
+if(total>0&&upi){
+$("qrArea").classList.remove("hidden");
+let link=`upi://pay?pa=${encodeURIComponent(upi)}&pn=${encodeURIComponent("BUBU VARIETY STORE")}&am=${total.toFixed(2)}&cu=INR`;
+$("qr").src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data="+encodeURIComponent(link);
+$("upiText").textContent="UPI ID: "+upi+" | Amount: ₹"+money(total);
+}else{$("qrArea").classList.add("hidden")}
+}
+
+function receipt(billNo){
+let {subtotal,discount,total}=getTotal();
+let itemLines=cart.map(x=>`${x.name} | ${x.qty} ${x.unit} x Rs.${money(x.rate)} = Rs.${money(x.rate*x.qty)}`).join("\n");
+return `BUBU VARIETY STORE
+ବୁବୁ ଭେରାଇଟି ଷ୍ଟୋର
+Palbani, Baripada, Mayurbhanj, Odisha, India
+GSTIN: 21AKOPJ9490R1Z8
+Mobile: 7205627144
+--------------------------------
+Bill No: #${billNo}
+Date: ${$("billDate").value}
+Customer: ${$("customer").value||"Walk-in Customer"}
+Mobile: ${$("phone").value||"Not provided"}
+Payment: ${$("payment").value}
+--------------------------------
+ITEMS
+${itemLines}
+--------------------------------
+Subtotal: Rs.${money(subtotal)}
+Discount: Rs.${money(discount)}
+GRAND TOTAL: Rs.${money(total)}
+UPI ID: ${upi||"Not configured"}
+--------------------------------
+Thank you for shopping!
+Visit Again - BUBU VARIETY STORE`;
+}
+
+function downloadReceipt(textContent,billNo){
+let blob=new Blob([textContent],{type:"text/plain;charset=utf-8"});
+let url=URL.createObjectURL(blob);
+let a=document.createElement("a");
+a.href=url;
+a.download="BUBU-STORE-Bill-"+billNo+".txt";
+document.body.appendChild(a);
+a.click();
+a.remove();
+setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+
+function saveBill(){
+if(!cart.length){alert("Pehle grocery item add karo");return}
+let phone=$("phone").value.trim();
+if(phone&&phone.length!==10){alert("Mobile number 10 digit ka hona chahiye");return}
+if(lastSavedNo===nextNo){alert("Ye bill already save ho chuka hai. New Bill par click karo.");return}
+
+let {total}=getTotal();
+let no=nextNo;
+let text=receipt(no);
+let bill={
+no,date:$("billDate").value,phone,
+customer:$("customer").value,
+payment:$("payment").value,
+items:[...cart],
+discount:getTotal().discount,
+total,paid:$("payment").value!=="Udhaar / Credit",
+receipt:text
+};
+bills.push(bill);
+saveData();
+
+if(phone&&bill.customer){
+customers[phone]=bill.customer;
+localStorage.setItem("bubuCustomers",JSON.stringify(customers));
+}
+lastSavedNo=no;
+nextNo++;
+localStorage.setItem("bubuNext",String(nextNo));
+downloadReceipt(text,no);
+$("message").textContent="✅ Bill saved! Receipt download ho rahi hai. Bill #"+no;
+setupBill();
+}
+
+function shareWhatsApp(){
+if(!cart.length){alert("Pehle item add karo");return}
+let phone=$("phone").value.replace(/\D/g,"");
+if(phone&&phone.length!==10){alert("Customer ka 10 digit mobile number check karo");return}
+let message=receipt(nextNo);
+let url=phone
+?"https://wa.me/91"+phone+"?text="+encodeURIComponent(message)
+:"https://wa.me/?text="+encodeURIComponent(message);
+window.open(url,"_blank");
+}
+
+function newBill(){
+if(cart.length&&!confirm("Current bill clear karna hai?"))return;
+cart=[];
+$("phone").value="";
+$("customer").value="";
+$("payment").value="Cash";
+$("discount").value=0;
+$("itemName").value="";
+$("rate").value="";
+$("qty").value=1;
+lastSavedNo=null;
+$("message").textContent="";
+renderItems();
+setupBill();
+}
+
+function renderHistory(){
+let sales=bills.reduce((s,b)=>s+Number(b.total),0);
+let pending=bills.filter(b=>!b.paid).reduce((s,b)=>s+Number(b.total),0);
+$("sales").textContent=money(sales);
+$("pending").textContent=money(pending);
+$("billCount").textContent=bills.length;
+
+$("historyList").innerHTML=bills.slice().reverse().map(b=>`
+<div class="history-item">
+<b>Bill #${b.no}</b> — ${escapeHTML(b.date)}<br>
+Customer: ${escapeHTML(b.customer||"Walk-in Customer")}<br>
+Mobile: ${escapeHTML(b.phone||"Not provided")}<br>
+Payment: ${escapeHTML(b.payment)}<br>
+Total: <b>₹${money(b.total)}</b><br>
+Status: <b>${b.paid?"PAID":"PENDING"}</b><br>
+${!b.paid?`<button class="green" data-paid="${b.no}">Mark Paid</button>`:""}
+<button class="blue" data-receipt="${b.no}">Download Receipt</button>
+</div>`).join("")||"No saved bills yet.";
+
+document.querySelectorAll("[data-paid]").forEach(btn=>btn.addEventListener("click",()=>{
+let b=bills.find(x=>x.no===Number(btn.dataset.paid));
+if(b){b.paid=true;saveData();renderHistory()}
+}));
+document.querySelectorAll("[data-receipt]").forEach(btn=>btn.addEventListener("click",()=>{
+let b=bills.find(x=>x.no===Number(btn.dataset.receipt));
+if(b)downloadReceipt(b.receipt,b.no);
+}));
+}
+
+function saveSettings(){
+upi=$("upi").value.trim();
+theme=$("theme").value;
+localStorage.setItem("bubuUpi",upi);
+localStorage.setItem("bubuTheme",theme);
+applyTheme();
+calculate();
+$("settingsMessage").textContent="✅ Settings successfully saved!";
+}
+
+function applyTheme(){
+if(theme==="dark"){
+document.body.style.background="#20252c";
+document.body.style.color="#fff";
+}else if(theme==="gray"){
+document.body.style.background="#dedede";
+document.body.style.color="#222";
+}else if(theme==="gold"){
+document.body.style.background="linear-gradient(135deg,#e8c65a,#6d963f)";
+document.body.style.color="#222";
+}else{
+document.body.style.background="linear-gradient(135deg,#dcebd1,#f8e8b5)";
+document.body.style.color="#222";
+}
+}
+
+setupBill();
+renderItems();
+$("upi").value=upi;
+$("theme").value=theme;
+applyTheme();
+</script>
+</body>
+                                           </
